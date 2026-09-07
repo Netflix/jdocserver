@@ -1,9 +1,12 @@
 # jdocserver
 
+[![Maven Central](https://img.shields.io/maven-central/v/com.netflix/com.netflix.tools.jdocserver)](https://central.sonatype.com/artifact/com.netflix/com.netflix.tools.jdocserver)
+![JDK 25+](https://img.shields.io/badge/JDK-25%2B-blue)
+
 `jdocserver` provides browsable API documentation for Java compilation contexts. It resolves classes and sources from standard JDK tool arguments and renders requested types with the standard doclet.
 
 > [!IMPORTANT]
-> This project is currently in preview. We'd love to hear your feedback! Use Issues for bugs and Discussions for feedback and suggestions.
+> This tool is currently in preview. Please report problems in the [`ja` issue tracker](https://github.com/Netflix/ja/issues) and share feedback, questions, and suggestions in [Discussions](https://github.com/Netflix/ja/discussions).
 
 ## Installation
 
