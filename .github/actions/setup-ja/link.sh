@@ -28,8 +28,10 @@ if [[ -e "$output_java_home" ]]; then
 fi
 java="$source_java_home/bin/java"
 jlink="$source_java_home/bin/jlink"
-if [[ ! -x "$java" || ! -x "$jlink" || ! -f "$source_java_home/jmods/java.base.jmod" ]]; then
-    echo "The source Java installation must provide java, jlink, and JMODs" >&2
+if [[ ! -x "$java" || ! -x "$jlink" || ! -f "$source_java_home/release" \
+        || ! -f "$source_java_home/jmods/java.base.jmod" \
+        || ! -f "$source_java_home/lib/src.zip" ]]; then
+    echo "The source Java installation must provide java, jlink, a release file, JMODs, and lib/src.zip" >&2
     exit 1
 fi
 
@@ -68,8 +70,10 @@ fi
     --add-modules ALL-MODULE-PATH \
     --generate-cds-archive \
     --output "$output_java_home"
+cp -p "$source_java_home/lib/src.zip" "$output_java_home/lib/src.zip"
 
 [[ -x "$output_java_home/bin/ja" && -x "$output_java_home/bin/jig" ]]
+[[ -f "$output_java_home/lib/src.zip" ]]
 "$output_java_home/bin/java" --list-modules | grep -Fqx "com.netflix.tools.ja@$ja_version"
 "$output_java_home/bin/java" --list-modules | grep -Fqx "com.netflix.tools.jig@$jig_version"
 if ! find "$output_java_home/lib" -type f -name '*.jsa' -print -quit | grep -q .; then

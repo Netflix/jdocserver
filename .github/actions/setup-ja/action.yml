@@ -45,7 +45,7 @@ runs:
         fi
         java_home="$RUNNER_TOOL_CACHE/ja/$fingerprint/$JA_VERSION-$JIG_VERSION"
         echo "java-home=$java_home" >> "$GITHUB_OUTPUT"
-        echo "cache-key=ja-toolchain-v1-${RUNNER_OS}-${RUNNER_ARCH}-${fingerprint}-${JA_VERSION}-${JIG_VERSION}" >> "$GITHUB_OUTPUT"
+        echo "cache-key=ja-toolchain-v2-${RUNNER_OS}-${RUNNER_ARCH}-${fingerprint}-${JA_VERSION}-${JIG_VERSION}" >> "$GITHUB_OUTPUT"
 
     - name: Restore ja toolchain
       id: cache
