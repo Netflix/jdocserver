@@ -10,6 +10,9 @@
 
 ## Installation
 
+> [!NOTE]
+> Netflix engineers should use the internally bundled toolchain rather than installing this tool separately.
+
 Follow the `ja` [Installation Guide](https://github.com/Netflix/ja#installation) to install the bundled tools, including `jdocserver`.
 
 For standalone use, `jar` and `jmod` artifacts for the tool are available on Maven Central.
