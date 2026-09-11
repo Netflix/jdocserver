@@ -69,6 +69,7 @@ public final class JdocServerTest {
         assertEquals(1, options.isSupportedOption("--port"));
         assertEquals(0, options.isSupportedOption("--browse"));
         assertEquals(0, options.isSupportedOption("--aot-warmup"));
+        assertEquals(0, options.isSupportedOption("--version"));
         assertEquals(1, options.isSupportedOption("--module-path"));
         assertEquals(-1, options.isSupportedOption("--unknown"));
     }
@@ -101,6 +102,23 @@ public final class JdocServerTest {
     }
 
     @Test
+    void printsVersion() {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        String version = JdocServer.class
+                .getModule()
+                .getDescriptor()
+                .rawVersion()
+                .orElse("dev");
+
+        int result = new JdocServer().run(new PrintWriter(output), new PrintWriter(error), "--version");
+
+        assertEquals(0, result, error.toString());
+        assertEquals("jdocserver " + version + "\n", output.toString());
+        assertEquals("", error.toString());
+    }
+
+    @Test
     void commandHelpDescribesServerOptions() {
         var output = new StringWriter();
         var error = new StringWriter();
@@ -117,6 +135,9 @@ public final class JdocServerTest {
         assertTrue(output.toString()
                          .contains("--browse"),
                 "help omits the browse option");
+        assertTrue(output.toString()
+                         .contains("--version"),
+                "help omits the version option");
         assertFalse(output.toString()
                           .contains("--class-path"),
                 "help advertises classpath documentation");

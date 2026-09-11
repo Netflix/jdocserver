@@ -43,6 +43,10 @@ import com.sun.net.httpserver.HttpServer;
  * in the foreground until interrupted.
  */
 public final class JdocServer implements ToolProvider, OptionChecker {
+    private static final CommandLine COMMAND_LINE = CommandLine.builder()
+            .version(JdocServer.class.getModule())
+            .build();
+
     /** {@inheritDoc} */
     @Override
     public String name() {
@@ -54,7 +58,7 @@ public final class JdocServer implements ToolProvider, OptionChecker {
     public int isSupportedOption(String option) {
         return switch (option) {
             case "-b", "--bind-address", "--port" -> 1;
-            case "--browse", "--aot-warmup", "-h", "--help" -> 0;
+            case "--browse", "--aot-warmup", "-h", "--help", "--version" -> 0;
             default -> DocumentationHandler.optionChecker().isSupportedOption(option);
         };
     }
@@ -69,6 +73,10 @@ public final class JdocServer implements ToolProvider, OptionChecker {
      */
     @Override
     public int run(PrintWriter out, PrintWriter err, String... arguments) {
+        var version = COMMAND_LINE.runVersion("jdocserver", out, arguments);
+        if (version.isPresent()) {
+            return version.orElseThrow();
+        }
         try {
             if (arguments.length == 1 && arguments[0].equals("--aot-warmup")) {
                 warmup();
@@ -188,6 +196,7 @@ public final class JdocServer implements ToolProvider, OptionChecker {
                       --port <port>             Port to listen on (default: 8000)
                       --browse                  Browse the documentation index
                   -h, --help                    Print this help message
+                      --version                 Print version information
 
                 Documentation input:
                   @<file>                       Read one argument per line
