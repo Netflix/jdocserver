@@ -14,7 +14,6 @@
 
 package com.netflix.tools.jdocserver;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
@@ -57,7 +56,6 @@ import javax.tools.OptionChecker;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
-import javax.tools.ToolProvider;
 
 import com.netflix.tools.jdocserver.CompilationContext.Overview;
 import com.netflix.tools.jdocserver.CompilationContext.ResolvedType;
@@ -79,10 +77,7 @@ import jdk.javadoc.internal.api.JavadocTool;
  */
 public final class DocumentationHandler implements HttpHandler, AutoCloseable {
     private static final OptionChecker OPTION_CHECKER = option -> {
-        DocumentationTool documentation = ToolProvider.getSystemDocumentationTool();
-        if (documentation == null) {
-            return -1;
-        }
+        DocumentationTool documentation = new JavadocTool();
         int operands = documentation.isSupportedOption(option);
         if (operands >= 0) {
             return operands;
@@ -370,10 +365,7 @@ public final class DocumentationHandler implements HttpHandler, AutoCloseable {
         arguments.add("-d");
         arguments.add(overviewRoot.toString());
 
-        DocumentationTool javadoc = ToolProvider.getSystemDocumentationTool();
-        if (javadoc == null) {
-            throw new IOException("The running JDK does not provide javadoc");
-        }
+        var javadoc = new JavadocTool();
         var diagnostics = new StringWriter();
         try (var systemSources = FileSystems.newFileSystem(context.systemSources());
              var fileManager = javadoc.getStandardFileManager(null, null, StandardCharsets.UTF_8)) {
@@ -671,10 +663,7 @@ public final class DocumentationHandler implements HttpHandler, AutoCloseable {
         Files.createDirectories(output);
         Files.write(sourceFile, source.bytes());
 
-        DocumentationTool javadoc = ToolProvider.getSystemDocumentationTool();
-        if (javadoc == null) {
-            throw new IOException("The running JDK does not provide javadoc");
-        }
+        var javadoc = new JavadocTool();
         var arguments = new ArrayList<>(context.javadocArguments(type, sourceRoot));
         if (documentationBase != null && Files.isRegularFile(overviewRoot.resolve("element-list"))) {
             arguments.add("-linkoffline");
@@ -683,12 +672,14 @@ public final class DocumentationHandler implements HttpHandler, AutoCloseable {
         }
         arguments.add("-d");
         arguments.add(output.toString());
-        arguments.add(sourceFile.toString());
-        var diagnostics = new ByteArrayOutputStream();
-        int result = javadoc.run(null, diagnostics, diagnostics, arguments.toArray(String[]::new));
-        if (result != 0) {
-            String detail = diagnostics.toString(StandardCharsets.UTF_8).strip();
-            return new GeneratedDocumentation(key, null, null, signaturePage(type, detail.isEmpty() ? "Javadoc generation failed" : detail));
+        var diagnostics = new StringWriter();
+        try (var fileManager = javadoc.getStandardFileManager(null, null, StandardCharsets.UTF_8)) {
+            var units = fileManager.getJavaFileObjects(sourceFile);
+            if (!javadoc.getTask(diagnostics, fileManager, null, null, arguments, units).call()) {
+                String detail = diagnostics.toString().strip();
+                return new GeneratedDocumentation(key, null, null,
+                        signaturePage(type, detail.isEmpty() ? "Javadoc generation failed" : detail));
+            }
         }
 
         String page = generatedPage(type);

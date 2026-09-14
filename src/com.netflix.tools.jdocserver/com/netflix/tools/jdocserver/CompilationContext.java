@@ -49,7 +49,6 @@ import java.util.zip.ZipException;
 import javax.tools.JavaFileObject;
 import javax.tools.JavaFileObject.Kind;
 import javax.tools.SimpleJavaFileObject;
-import javax.tools.ToolProvider;
 
 import com.sun.source.tree.ExportsTree;
 import com.sun.source.tree.ModuleTree;
@@ -57,6 +56,7 @@ import com.sun.source.tree.ModuleTree.ModuleKind;
 import com.sun.source.tree.ProvidesTree;
 import com.sun.source.tree.RequiresTree;
 import com.sun.source.util.JavacTask;
+import com.sun.tools.javac.api.JavacTool;
 
 final class CompilationContext {
     private final List<String> toolArguments;
@@ -420,8 +420,7 @@ final class CompilationContext {
                 return content;
             }
         };
-        JavacTask task = (JavacTask) ToolProvider.getSystemJavaCompiler().getTask(null, null, null, List.of("-proc:none"), null,
-                List.of(source));
+        JavacTask task = JavacTool.create().getTask(null, null, null, List.of("-proc:none"), null, List.of(source));
         ModuleTree module = null;
         for (var unit : task.parse()) {
             if (unit.getModule() != null) {

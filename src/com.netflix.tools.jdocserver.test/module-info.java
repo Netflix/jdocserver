@@ -17,6 +17,7 @@
  * @addExports jdk.javadoc/jdk.javadoc.internal.api=com.netflix.tools.jdocserver
  * @addExports jdk.javadoc/jdk.javadoc.internal.doclets.toolkit.util=com.netflix.tools.jdocserver
  * @addExports jdk.javadoc/jdk.javadoc.internal.tool=com.netflix.tools.jdocserver
+ * @addExports jdk.compiler/com.sun.tools.javac.api=com.netflix.tools.jdocserver
  * @addExports jdk.compiler/com.sun.tools.javac.main=com.netflix.tools.jdocserver
  * @addExports jdk.compiler/com.sun.tools.javac.util=com.netflix.tools.jdocserver
  */
