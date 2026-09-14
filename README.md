@@ -6,7 +6,7 @@
 `jdocserver` provides browsable API documentation for Java compilation contexts. It resolves classes and sources from standard JDK tool arguments and renders requested types with the standard doclet.
 
 > [!IMPORTANT]
-> This tool is currently in preview. We are collecting all preview feedback in the [`ja` repository](https://github.com/Netflix/ja): use [Issues](https://github.com/Netflix/ja/issues) to report problems and [Discussions](https://github.com/Netflix/ja/discussions) for feedback, questions, and suggestions.
+> This tool is currently in preview. We are collecting feedback for all of the tools together in [Discussions](https://github.com/Netflix/ja/discussions).
 
 ## Installation
 
