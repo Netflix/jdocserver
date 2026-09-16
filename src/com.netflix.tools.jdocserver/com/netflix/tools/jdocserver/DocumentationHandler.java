@@ -41,6 +41,8 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
+import java.util.ServiceLoader.Provider;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
@@ -77,7 +79,12 @@ import jdk.javadoc.internal.api.JavadocTool;
  */
 public final class DocumentationHandler implements HttpHandler, AutoCloseable {
     private static final OptionChecker OPTION_CHECKER = option -> {
-        DocumentationTool documentation = new JavadocTool();
+        DocumentationTool documentation = ServiceLoader.load(DocumentationTool.class)
+                .findFirst()
+                .orElse(null);
+        if (documentation == null) {
+            return -1;
+        }
         int operands = documentation.isSupportedOption(option);
         if (operands >= 0) {
             return operands;
@@ -90,6 +97,7 @@ public final class DocumentationHandler implements HttpHandler, AutoCloseable {
     };
 
     private final CompilationContext context;
+    private final Provider<DocumentationTool> documentationTool;
     private final List<String> inputArguments;
     private final Path workspace;
     private final Path generatedRoot;
@@ -101,6 +109,10 @@ public final class DocumentationHandler implements HttpHandler, AutoCloseable {
     private volatile boolean closed;
 
     private DocumentationHandler(List<String> arguments) throws IOException {
+        documentationTool = ServiceLoader.load(DocumentationTool.class)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new IOException("The running JDK does not provide javadoc"));
         inputArguments = expandArgumentFiles(arguments);
         context = CompilationContext.parse(inputArguments);
         workspace = Files.createTempDirectory("jdocserver-");
@@ -198,6 +210,17 @@ public final class DocumentationHandler implements HttpHandler, AutoCloseable {
      */
     @Override
     public void handle(HttpExchange exchange) throws IOException {
+        try {
+            handleRequest(exchange);
+        } catch (IOException failure) {
+            sendHtml(exchange, 500, errorPage(failure), exchange.getRequestMethod().equals("HEAD"));
+        } catch (RuntimeException | Error failure) {
+            failure.printStackTrace();
+            throw failure;
+        }
+    }
+
+    private void handleRequest(HttpExchange exchange) throws IOException {
         if (closed) {
             sendText(exchange, 503, "Documentation handler is closed");
             return;
@@ -221,22 +244,18 @@ public final class DocumentationHandler implements HttpHandler, AutoCloseable {
             handleType(exchange, method.equals("HEAD"));
             return;
         }
-        try {
-            ensureOverview();
-            String relative = path.equals("/") ? "index.html" : path.substring(1);
-            if (serveFile(exchange, overviewRoot, relative, method.equals("HEAD"))) {
+        ensureOverview();
+        String relative = path.equals("/") ? "index.html" : path.substring(1);
+        if (serveFile(exchange, overviewRoot, relative, method.equals("HEAD"))) {
+            return;
+        }
+        if (relative.endsWith(".html")) {
+            String typeName = typeNameFromOverviewPath(relative);
+            if (typeName != null && materializeOverviewClass(typeName, relative) && serveFile(exchange, overviewRoot, relative, method.equals("HEAD"))) {
                 return;
             }
-            if (relative.endsWith(".html")) {
-                String typeName = typeNameFromOverviewPath(relative);
-                if (typeName != null && materializeOverviewClass(typeName, relative) && serveFile(exchange, overviewRoot, relative, method.equals("HEAD"))) {
-                    return;
-                }
-            }
-            sendText(exchange, 404, "Not found");
-        } catch (IOException failure) {
-            sendHtml(exchange, 500, errorPage(failure), method.equals("HEAD"));
         }
+        sendText(exchange, 404, "Not found");
     }
 
     /**
@@ -274,8 +293,17 @@ public final class DocumentationHandler implements HttpHandler, AutoCloseable {
             overviewFuture().join();
         } catch (CompletionException failure) {
             Throwable cause = failure.getCause();
+            while (cause instanceof CompletionException && cause.getCause() != null) {
+                cause = cause.getCause();
+            }
             if (cause instanceof IOException io) {
                 throw io;
+            }
+            if (cause instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            if (cause instanceof Error error) {
+                throw error;
             }
             throw new IOException("Overview generation failed", cause);
         }
@@ -365,7 +393,7 @@ public final class DocumentationHandler implements HttpHandler, AutoCloseable {
         arguments.add("-d");
         arguments.add(overviewRoot.toString());
 
-        var javadoc = new JavadocTool();
+        DocumentationTool javadoc = documentationTool.get();
         var diagnostics = new StringWriter();
         try (var systemSources = FileSystems.newFileSystem(context.systemSources());
              var fileManager = javadoc.getStandardFileManager(null, null, StandardCharsets.UTF_8)) {
@@ -606,8 +634,17 @@ public final class DocumentationHandler implements HttpHandler, AutoCloseable {
                             .join();
         } catch (CompletionException failure) {
             Throwable cause = failure.getCause();
+            while (cause instanceof CompletionException && cause.getCause() != null) {
+                cause = cause.getCause();
+            }
             if (cause instanceof IOException io) {
                 throw io;
+            }
+            if (cause instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            if (cause instanceof Error error) {
+                throw error;
             }
             throw new IOException("Documentation generation failed", cause);
         }
@@ -663,7 +700,7 @@ public final class DocumentationHandler implements HttpHandler, AutoCloseable {
         Files.createDirectories(output);
         Files.write(sourceFile, source.bytes());
 
-        var javadoc = new JavadocTool();
+        DocumentationTool javadoc = documentationTool.get();
         var arguments = new ArrayList<>(context.javadocArguments(type, sourceRoot));
         if (documentationBase != null && Files.isRegularFile(overviewRoot.resolve("element-list"))) {
             arguments.add("-linkoffline");

@@ -52,5 +52,8 @@ module com.netflix.tools.jdocserver {
     exports com.netflix.tools.jdocserver;
     exports com.netflix.tools.jdocserver.internal to jdk.javadoc;
 
+    uses javax.tools.DocumentationTool;
+    uses javax.tools.JavaCompiler;
+
     provides java.util.spi.ToolProvider with com.netflix.tools.jdocserver.JdocServer;
 }

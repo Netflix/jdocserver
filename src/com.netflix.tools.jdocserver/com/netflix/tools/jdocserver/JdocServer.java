@@ -24,6 +24,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -106,7 +107,11 @@ public final class JdocServer implements ToolProvider, OptionChecker {
                     out.println("URL " + uri);
                     out.flush();
                     if (options.browse()) {
-                        browse(uri);
+                        URI target = options.browseType()
+                                .map(handler::typeUri)
+                                .map(uri::resolve)
+                                .orElse(uri);
+                        browse(target);
                     }
 
                     var shutdownHook = new Thread(running::close, "jdocserver-shutdown");
@@ -194,7 +199,7 @@ public final class JdocServer implements ToolProvider, OptionChecker {
                 Server options:
                   -b, --bind-address <address>  Address to bind (default: 127.0.0.1)
                       --port <port>             Port to listen on (default: 8000)
-                      --browse                  Browse the documentation index
+                      --browse[=<type>]         Browse the index or a qualified type
                   -h, --help                    Print this help message
                       --version                 Print version information
 
@@ -216,11 +221,12 @@ public final class JdocServer implements ToolProvider, OptionChecker {
     }
 
     private record Options(InetSocketAddress address, boolean defaultBinding, boolean browse,
-                           boolean help, List<String> documentationArguments) {
+                           Optional<String> browseType, boolean help, List<String> documentationArguments) {
         static Options parse(String[] arguments) {
             String bindAddress = null;
             String port = null;
             boolean browse = false;
+            String browseType = null;
             boolean help = false;
             var documentation = new ArrayList<String>();
             for (int i = 0; i < arguments.length; i++) {
@@ -245,14 +251,20 @@ public final class JdocServer implements ToolProvider, OptionChecker {
                             bindAddress = argument.substring("--bind-address=".length());
                         } else if (argument.startsWith("--port=")) {
                             port = argument.substring("--port=".length());
+                        } else if (argument.startsWith("--browse=")) {
+                            browseType = argument.substring("--browse=".length());
+                            if (browseType.isBlank()) {
+                                throw new IllegalArgumentException("--browse requires a type after =");
+                            }
+                            browse = true;
                         } else {
                             documentation.add(argument);
                         }
                     }
                 }
             }
-            return new Options(parseAddress(bindAddress, port), bindAddress == null, browse, help,
-                    List.copyOf(documentation));
+            return new Options(parseAddress(bindAddress, port), bindAddress == null, browse,
+                    Optional.ofNullable(browseType), help, List.copyOf(documentation));
         }
 
         private static InetSocketAddress parseAddress(String address, String value) {

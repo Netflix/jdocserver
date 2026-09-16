@@ -133,14 +133,25 @@ public final class JdocServerTest {
                          .contains("--port <port>"),
                 "help omits the port option");
         assertTrue(output.toString()
-                         .contains("--browse"),
-                "help omits the browse option");
+                         .contains("--browse[=<type>]"),
+                "help omits the browse target option");
         assertTrue(output.toString()
                          .contains("--version"),
                 "help omits the version option");
         assertFalse(output.toString()
                           .contains("--class-path"),
                 "help advertises classpath documentation");
+    }
+
+    @Test
+    void commandRejectsAnEmptyBrowseTarget() {
+        var output = new StringWriter();
+        var error = new StringWriter();
+
+        int result = new JdocServer().run(new PrintWriter(output), new PrintWriter(error), "--help", "--browse=");
+
+        assertEquals(2, result);
+        assertTrue(error.toString().contains("--browse requires a type"), error.toString());
     }
 
     @Test
@@ -336,7 +347,7 @@ public final class JdocServerTest {
                         .followRedirects(Redirect.NORMAL)
                         .build();
                 HttpResponse<String> type = get(client, server.uri(handler.typeUri("example.module.Api")));
-                assertEquals(200, type.statusCode(), "module type request failed");
+                assertEquals(200, type.statusCode(), "module type request failed: " + type.body());
                 assertTrue(type.body()
                                .contains("Class Api"),
                         "module documentation is missing");
