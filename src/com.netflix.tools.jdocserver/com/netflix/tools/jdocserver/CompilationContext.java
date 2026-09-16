@@ -40,12 +40,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ServiceLoader;
+import java.util.ServiceLoader.Provider;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.zip.ZipException;
+import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.JavaFileObject.Kind;
 import javax.tools.SimpleJavaFileObject;
@@ -56,9 +59,9 @@ import com.sun.source.tree.ModuleTree.ModuleKind;
 import com.sun.source.tree.ProvidesTree;
 import com.sun.source.tree.RequiresTree;
 import com.sun.source.util.JavacTask;
-import com.sun.tools.javac.api.JavacTool;
 
 final class CompilationContext {
+    private final Provider<JavaCompiler> compiler;
     private final List<String> toolArguments;
     private final List<Path> modulePath;
     private final List<Path> sourcePath;
@@ -69,6 +72,7 @@ final class CompilationContext {
     private final boolean defaultJdk;
 
     private CompilationContext(
+            Provider<JavaCompiler> compiler,
             List<String> toolArguments,
             List<Path> modulePath,
             List<Path> sourcePath,
@@ -77,6 +81,7 @@ final class CompilationContext {
             Path system,
             Path systemSources,
             boolean defaultJdk) {
+        this.compiler = compiler;
         this.toolArguments = List.copyOf(toolArguments);
         this.modulePath = List.copyOf(modulePath);
         this.sourcePath = List.copyOf(sourcePath);
@@ -87,7 +92,11 @@ final class CompilationContext {
         this.defaultJdk = defaultJdk;
     }
 
-    static CompilationContext parse(List<String> arguments) {
+    static CompilationContext parse(List<String> arguments) throws IOException {
+        Provider<JavaCompiler> compiler = ServiceLoader.load(JavaCompiler.class)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new IOException("The running JDK does not provide javac"));
         var retained = new ArrayList<String>();
         var classPath = new ArrayList<Path>();
         var modulePath = new ArrayList<Path>();
@@ -162,8 +171,8 @@ final class CompilationContext {
         if (!defaultJdk && moduleSourcePath.isEmpty()) {
             throw new IllegalArgumentException("no modular documentation sources were provided");
         }
-        return new CompilationContext(retained, modulePath, sourcePath, moduleSourcePath, requestedModules, system,
-                systemSources, defaultJdk);
+        return new CompilationContext(compiler, retained, modulePath, sourcePath, moduleSourcePath, requestedModules,
+                system, systemSources, defaultJdk);
     }
 
     boolean defaultJdk() {
@@ -344,7 +353,7 @@ final class CompilationContext {
         return List.copyOf(modules.values());
     }
 
-    private static void addSourceModule(Path root, Map<String, ModuleDescriptor> modules) throws IOException {
+    private void addSourceModule(Path root, Map<String, ModuleDescriptor> modules) throws IOException {
         byte[] source = read(root, "module-info.java");
         if (source == null) {
             return;
@@ -412,7 +421,7 @@ final class CompilationContext {
         return Optional.empty();
     }
 
-    private static ModuleDescriptor parseModuleDescriptor(byte[] bytes) throws IOException {
+    private ModuleDescriptor parseModuleDescriptor(byte[] bytes) throws IOException {
         String content = new String(bytes, StandardCharsets.UTF_8);
         JavaFileObject source = new SimpleJavaFileObject(URI.create("memory:///module-info.java"), Kind.SOURCE) {
             @Override
@@ -420,7 +429,7 @@ final class CompilationContext {
                 return content;
             }
         };
-        JavacTask task = JavacTool.create().getTask(null, null, null, List.of("-proc:none"), null, List.of(source));
+        JavacTask task = (JavacTask) compiler.get().getTask(null, null, null, List.of("-proc:none"), null, List.of(source));
         ModuleTree module = null;
         for (var unit : task.parse()) {
             if (unit.getModule() != null) {
