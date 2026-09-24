@@ -24,9 +24,10 @@ Capabilities include:
 
 Follow the `ja` [Installation Guide](https://github.com/Netflix/ja#installation) to install the bundled tools, including `jdocserver`.
 
-For standalone use, download the modular JAR from [Maven Central](https://central.sonatype.com/artifact/com.netflix/com.netflix.tools.jdocserver). JDK 25 or later is required. Run it as module `com.netflix.tools.jdocserver`:
+For standalone use, download the modular JAR from [Maven Central](https://central.sonatype.com/artifact/com.netflix/com.netflix.tools.jdocserver). JDK 25 or later is required. Run it directly or as module `com.netflix.tools.jdocserver`:
 
 ```sh
+java -jar com.netflix.tools.jdocserver-VERSION.jar --browse
 java --module-path com.netflix.tools.jdocserver-VERSION.jar --module com.netflix.tools.jdocserver --browse
 ```
 
