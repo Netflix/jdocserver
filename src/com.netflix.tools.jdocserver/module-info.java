@@ -44,7 +44,6 @@
  */
 module com.netflix.tools.jdocserver {
     requires java.compiler;
-    requires java.desktop;
     requires jdk.compiler;
     requires jdk.httpserver;
     requires jdk.javadoc;

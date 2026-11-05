@@ -14,8 +14,6 @@
 
 package com.netflix.tools.jdocserver;
 
-import java.awt.Desktop;
-import java.awt.Desktop.Action;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Inet6Address;
@@ -172,19 +170,31 @@ public final class JdocServer implements ToolProvider, OptionChecker {
 
     private static void browse(URI uri) throws IOException {
         try {
-            if (!Desktop.isDesktopSupported()) {
-                throw new IOException("desktop browsing is not supported");
+            Process process = new ProcessBuilder(browseCommand(System.getProperty("os.name"), uri)).inheritIO().start();
+            int status;
+            try {
+                status = process.waitFor();
+            } catch (InterruptedException failure) {
+                process.destroy();
+                Thread.currentThread().interrupt();
+                throw new IOException("Browser launch interrupted", failure);
             }
-            Desktop desktop = Desktop.getDesktop();
-            if (!desktop.isSupported(Action.BROWSE)) {
-                throw new IOException("no browser handler is available");
+            if (status != 0) {
+                throw new IOException("URL opener exited with status " + status);
             }
-            desktop.browse(uri);
         } catch (IOException failure) {
             throw new IOException("Cannot browse " + uri + ": " + failure.getMessage(), failure);
-        } catch (UnsupportedOperationException | SecurityException failure) {
-            throw new IOException("Cannot browse " + uri + ": " + failure, failure);
         }
+    }
+
+    private static List<String> browseCommand(String osName, URI uri) throws IOException {
+        String target = uri.toASCIIString();
+        return switch (osName) {
+            case "Mac OS X" -> List.of("open", target);
+            case "Linux" -> List.of("xdg-open", target);
+            case String name when name.startsWith("Windows") -> List.of("rundll32", "url.dll,FileProtocolHandler", target);
+            default -> throw new IOException("Browser launching is not supported on " + osName);
+        };
     }
 
     private static void printHelp(PrintWriter out) {
