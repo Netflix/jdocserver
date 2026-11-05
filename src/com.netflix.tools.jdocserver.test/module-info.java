@@ -13,6 +13,7 @@
  */
 
 /**
+ * @addOpens com.netflix.tools.jdocserver/com.netflix.tools.jdocserver=com.netflix.tools.jdocserver.test
  * @addExports jdk.javadoc/jdk.javadoc.internal.doclets.formats.html=com.netflix.tools.jdocserver
  * @addExports jdk.javadoc/jdk.javadoc.internal.api=com.netflix.tools.jdocserver
  * @addExports jdk.javadoc/jdk.javadoc.internal.doclets.toolkit.util=com.netflix.tools.jdocserver

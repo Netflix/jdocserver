@@ -54,6 +54,8 @@ jdocserver --browse
 jdocserver --browse=java.lang.String
 ```
 
+`--browse` opens the URL using `open` on macOS, `xdg-open` on Linux, or the Windows URL handler. Linux requires `xdg-open` on `PATH`. Omit `--browse` to open the printed URL manually, including on headless systems.
+
 Browsing the JDK requires its source archive at `lib/src.zip`.
 
 ## Documentation
